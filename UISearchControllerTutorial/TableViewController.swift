@@ -10,18 +10,22 @@ import UIKit
 
 class TableViewController: UITableViewController {
     
+    let searchController = UISearchController(searchResultsController: nil)
+    
     var phones = [Phone]()
+    
+    var filteredPhones = [Phone]()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         phones = [
             Phone(category: "iPhone", name: "iPhone 5"),
-            Phone(category: "iPhone", name: "iphone 5s"),
-            Phone(category: "iphone", name: "iphone 6"),
-            Phone(category: "iphone", name: "iphone 6 plus"),
-            Phone(category: "iphone", name: "iphone 6s"),
-            Phone(category: "iphone", name: "iphone 6s plus"),
+            Phone(category: "iPhone", name: "iPhone 5s"),
+            Phone(category: "iPhone", name: "iPhone 6"),
+            Phone(category: "iPhone", name: "iPhone 6 plus"),
+            Phone(category: "iPhone", name: "iPhone 6s"),
+            Phone(category: "iPhone", name: "iPhone 6s plus"),
             Phone(category: "android", name: "galaxy note 4"),
             Phone(category: "android", name: "galaxy note 5"),
             Phone(category: "android", name: "galaxy s5"),
@@ -30,6 +34,21 @@ class TableViewController: UITableViewController {
             Phone(category: "android", name: "galaxy s7"),
             Phone(category: "android", name: "galaxy s7 egde"),
         ]
+        
+        // 1
+        searchController.searchResultsUpdater = self
+        // 2
+        searchController.dimsBackgroundDuringPresentation = false
+        // 3
+        definesPresentationContext = true
+        // 4
+        tableView.tableHeaderView = searchController.searchBar
+        // 5
+        searchController.searchBar.barTintColor = UIColor(red: 52.0/255.0, green: 200.0/255.0, blue: 114.0/255.0, alpha: 1.0)
+        searchController.searchBar.tintColor = UIColor.whiteColor()
+        
+        searchController.searchBar.scopeButtonTitles = ["All", "iPhone", "android"]
+        searchController.searchBar.delegate = self
     }
 
     override func didReceiveMemoryWarning() {
@@ -44,13 +63,33 @@ class TableViewController: UITableViewController {
     }
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if searchController.active && searchController.searchBar.text != "" {
+            return filteredPhones.count
+        }
         return phones.count
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("TableViewCell", forIndexPath: indexPath)
-        cell.textLabel?.text = phones[indexPath.row].name
+        
+        let phone: Phone
+        if searchController.active && searchController.searchBar.text != "" {
+            phone = filteredPhones[indexPath.row]
+        } else {
+            phone = phones[indexPath.row]
+        }
+        
+        cell.textLabel?.text = phone.name
         return cell
+    }
+    
+    func filterContentForSearchText(searchText: String, scope: String = "All") {
+        filteredPhones = phones.filter { phone in
+            let categoryMatch = (scope == "All") || (phone.category == scope)
+            return categoryMatch && phone.name.lowercaseString.containsString(searchText.lowercaseString)
+        }
+        
+        tableView.reloadData()
     }
     
     // MARK: - Navigation
@@ -59,8 +98,29 @@ class TableViewController: UITableViewController {
         if segue.identifier == "ToDetailVCSegue" {
             if let indexPath = tableView.indexPathForSelectedRow {
                 let detailViewVC = segue.destinationViewController as! DetailViewController
-                detailViewVC.phone = phones[indexPath.row]
+                let phone: Phone
+                if searchController.active && searchController.searchBar.text != "" {
+                    phone = filteredPhones[indexPath.row]
+                } else {
+                    phone = phones[indexPath.row]
+                }
+                
+                detailViewVC.phone = phone
             }
         }
+    }
+}
+
+extension TableViewController: UISearchResultsUpdating {
+    func updateSearchResultsForSearchController(searchController: UISearchController) {
+        let searchBar = searchController.searchBar
+        let scope = searchBar.scopeButtonTitles![searchBar.selectedScopeButtonIndex]
+        filterContentForSearchText(searchController.searchBar.text!, scope: scope)
+    }
+}
+
+extension TableViewController: UISearchBarDelegate {
+    func searchBar(searchBar: UISearchBar, selectedScopeButtonIndexDidChange selectedScope: Int) {
+        filterContentForSearchText(searchBar.text!, scope: searchBar.scopeButtonTitles![selectedScope])
     }
 }
